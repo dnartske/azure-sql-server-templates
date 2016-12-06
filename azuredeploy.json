@@ -1,0 +1,193 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sqlAdministratorLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The admin user of the SQL Server"
+      }
+    },
+    "sqlAdministratorLoginPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the admin user of the SQL Server"
+      }
+    },
+    "databaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the database"
+      }
+    },
+    "sqlserverName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the SQL Server"
+      }
+    },
+    "elasticPoolName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Elastic Pool Name"
+      }
+    },
+    "ADadmin": {
+      "type": "string",
+      "metadata": {
+        "description": "The login for Azure Active Directory account"
+      }
+    },
+    "ADadminSid": {
+      "type": "string",
+      "metadata": {
+        "description": "The sid for Azure Active Directory account"
+      }
+    },
+    "ADadminTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "The TenantId of the Azure Active Directory"
+      }
+    }
+  },
+  "variables": {
+    "SQLapiVersion": "2014-04-01-preview",
+    "storageApiVersion": "2015-06-15",
+    "sqlserverName": "[parameters('sqlserverName')]",
+    "databaseName": "[parameters('databaseName')]",
+    "databaseSku": "Basic",
+    "elasticPoolName": "[parameters('elasticPoolName')]",
+    "elasticPoolSku": "Basic",
+    "serverFirewallRuleName": "Rule Name",
+    "serverFirewallStartIp": "XXX.XXX.XXX.XXX",
+    "serverFirewallEndIp": "XXX.XXX.XXX.XXX",
+    "auditStorageAccountName": "sqlauditlogeteller",
+    "auditStorageAccountKey": "STORAGE ACCOUNT KEY",
+    "auditStorageAccountSubscriptionId": "[subscription().id]",
+    "auditLogsTableName": "SQLDBAuditLogs",
+    "auditRetentionDays": "365",
+    "audutEventTypesToAudit": "all"
+  },
+  "resources": [
+    {
+      "name": "[variables('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "[variables('SQLapiVersion')]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdministratorLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdministratorLoginPassword')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "name": "[variables('databaseName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "tags": {
+            "displayName": "Database"
+          },
+          "apiVersion": "[variables('SQLapiVersion')]",
+          "dependsOn": [
+            "[variables('sqlserverName')]",
+            "[variables('elasticPoolName')]"
+          ],
+          "properties": {
+            "edition": "[variables('databaseSku')]",
+            "collation": "SQL_Latin1_General_CP1_CI_AS",
+            "elasticPoolName": "[variables('elasticPoolName')]"
+          },
+          "resources": [
+            {
+              "type": "transparentDataEncryption",
+              "apiVersion": "[variables('SQLapiVersion')]",
+              "dependsOn": [
+                "[parameters('databaseName')]"
+              ],
+              "location": "[resourceGroup().location]",
+              "name": "current",
+              "properties": {
+                "status": "Enabled"
+              }
+            }
+          ]
+        },
+        {
+          "type": "firewallrules",
+          "apiVersion": "[variables('SQLapiVersion')]",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "location": "[resourceGroup().location]",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "type": "firewallrules",
+          "apiVersion": "[variables('SQLapiVersion')]",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "location": "[resourceGroup().location]",
+          "name": "[variables('serverFirewallRuleName')]",
+          "properties": {
+            "startIpAddress": "[variables('serverFirewallStartIp')]",
+            "endIpAddress": "[variables('serverFirewallEndIp')]"
+          }
+        },
+        {
+          "type": "elasticPools",
+          "apiVersion": "[variables('SQLapiVersion')]",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "location": "[resourceGroup().location]",
+          "name": "[variables('elasticPoolName')]",
+          "properties": {
+            "edition": "[variables('elasticPoolSku')]"
+          }
+        },
+        {
+          "type": "administrators",
+          "apiVersion": "[variables('SQLapiVersion')]",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "location": "[resourceGroup().location]",
+          "name": "ActiveDirectory",
+          "properties": {
+            "administratorType": "ActiveDirectory",
+            "login": "[parameters('ADadmin')]",
+            "sid": "[parameters('ADadminSid')]",
+            "tenantId": "[parameters('ADadminTenantId')]"
+          }
+        },
+        {
+          "apiVersion": "2014-04-01-preview",
+          "type": "auditingPolicies",
+          "name": "Default",
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "properties": {
+            "auditingState": "Enabled",
+            "storageAccountName": "[variables('auditStorageAccountName')]",
+            "storageAccountKey": "[variables('auditStorageAccountKey')]",
+            "storageAccountResourceGroupName": "[resourceGroup().name]",
+            "storageAccountSubscriptionId": "[variables('auditStorageAccountSubscriptionId')]",
+            "auditLogsTableName": "[variables('auditLogsTableName')]",
+            "retentionDays": "[variables('auditRetentionDays')]",
+            "eventTypesToAudit": "[variables('audutEventTypesToAudit')]"
+          }
+        }
+
+      ]
+    }
+  ],
+  "outputs": {   
+  }
+}

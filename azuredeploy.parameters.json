@@ -1,0 +1,30 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sqlserverName": {
+      "value": "etellerserver101"
+    },
+    "sqlAdministratorLogin": {
+      "value": "sqladmin"
+    },
+    "sqlAdministratorLoginPassword": {
+      "value": "11SuperSecret!!"
+    },
+    "databaseName": {
+      "value": "etellerdb101"
+    },
+    "elasticPoolName": {
+      "value": "etellerpool101"
+    },
+    "ADadmin": {
+      "value": "makolo@domain.com"
+    },
+    "ADadminSid": {
+      "value": "GUID"
+    },
+    "ADadminTenantId": {
+      "value": "GUID"
+    }
+  }
+}
